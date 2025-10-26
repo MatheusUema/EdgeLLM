@@ -4,7 +4,7 @@
     "target": "es2015",
     "lib": ["es2015", "dom"],
     "jsx": "react-native",
-    "module": "commonjs",
+    "module": "preserve",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
