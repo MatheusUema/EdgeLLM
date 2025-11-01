@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { Message } from "../types";
 import { MessageBubble } from "./MessageBubble";
+import { useVoice } from "../hooks/useVoice";
 
 interface ChatScreenProps {
   selectedGGUF: string | null;
@@ -28,6 +29,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onBackToSelection,
   isGenerating,
 }) => {
+  const { isListening, partialResults, toggleListening } = useVoice(onChangeInput);
+
+  const displayText = isListening && partialResults ? partialResults : userInput;
+
   return (
     <>
       <View style={styles.chatWrapper}>
@@ -51,12 +56,26 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       <View style={styles.bottomContainer}>
         <View style={styles.inputContainer}>
           <View style={styles.inputRow}>
+            <TouchableOpacity
+              style={styles.micButton}
+              onPress={toggleListening}
+              disabled={isGenerating}
+            >
+              {isListening ? (
+                <View style={styles.listeningIndicator}>
+                  <ActivityIndicator size="small" color="#FF3B30" />
+                </View>
+              ) : (
+                <Text style={styles.micIcon}>🎤</Text>
+              )}
+            </TouchableOpacity>
             <TextInput
               style={styles.input}
-              placeholder="Type your message..."
+              placeholder={isListening ? "Listening..." : "Type your message..."}
               placeholderTextColor="#94A3B8"
-              value={userInput}
+              value={displayText}
               onChangeText={onChangeInput}
+              editable={!isListening}
             />
             {isGenerating ? (
               <TouchableOpacity style={styles.stopButton} onPress={onStopGeneration}>
@@ -128,6 +147,24 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     gap: 12,
+    alignItems: "center",
+  },
+  micButton: {
+    backgroundColor: "#F1F5F9",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 50,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  micIcon: {
+    fontSize: 24,
+  },
+  listeningIndicator: {
+    paddingVertical: 4,
   },
   sendButton: {
     backgroundColor: "#3B82F6",
