@@ -31,17 +31,23 @@ export const useConversation = ({
   }, []);
 
   const sendMessage = useCallback(
-    async (userInput: string) => {
+    async (userInput: string, imageUri?: string) => {
       if (!context) {
         throw new Error("Model Not Loaded. Please load the model first.");
       }
-      if (!userInput.trim()) {
-        throw new Error("Please enter a message.");
+      if (!userInput.trim() && !imageUri) {
+        throw new Error("Please enter a message or select an image.");
       }
+
+      const userMessage: Message = {
+        role: "user",
+        content: userInput || "📷 [Image]",
+        ...(imageUri && { imageUri }),
+      };
 
       const newConversation: Message[] = [
         ...conversation,
-        { role: "user", content: userInput },
+        userMessage,
       ];
       setConversation(newConversation);
       setIsGenerating(true);

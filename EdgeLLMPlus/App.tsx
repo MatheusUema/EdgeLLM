@@ -137,6 +137,18 @@ function App(): React.JSX.Element {
     }
   };
 
+  const handleImageSelected = async (imageUri: string) => {
+    try {
+      // Create a message with the image
+      const imageMessage = `📷 [Image attached]`;
+      await sendMessage(imageMessage, imageUri);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      Alert.alert("Error", `Failed to send image: ${errorMessage}`);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -176,6 +188,7 @@ function App(): React.JSX.Element {
               onStopGeneration={stopGeneration}
               onBackToSelection={handleBackToModelSelection}
               isGenerating={isGenerating}
+              onImageSelected={handleImageSelected}
             />
           )}
 

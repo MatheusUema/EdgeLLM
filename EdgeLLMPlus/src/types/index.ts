@@ -5,6 +5,7 @@ export interface Message {
   content: string;
   thought?: string;
   showThought?: boolean;
+  imageUri?: string;
 }
 
 export interface CompletionData {

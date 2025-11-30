@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { Message } from "../types";
 
@@ -24,30 +24,50 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           message.role === "user" ? styles.userBubble : styles.assistantBubble,
         ]}
       >
-        <Text
-          style={[
-            styles.messageText,
-            message.role === "user" && styles.userMessageText,
-          ]}
-        >
-          {message.thought && onToggleThought && (
-            <TouchableOpacity
-              onPress={() => onToggleThought(index)}
-              style={styles.toggleButton}
+        {message.thought && onToggleThought && (
+          <TouchableOpacity
+            onPress={() => onToggleThought(index)}
+            style={styles.toggleButton}
+          >
+            <Text style={styles.toggleText}>
+              {message.showThought ? "▼ Hide Thought" : "▶ Show Thought"}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {message.showThought && message.thought && (
+          <View style={styles.thoughtContainer}>
+            <Text style={styles.thoughtTitle}>Model's Reasoning:</Text>
+            <Text style={styles.thoughtText}>{message.thought}</Text>
+          </View>
+        )}
+        {message.imageUri && (
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: message.imageUri }}
+              style={styles.messageImage}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+        {message.content && (
+          <View
+            style={[
+              styles.messageContent,
+              message.role === "user" && styles.userMessageContent,
+            ]}
+          >
+            <Markdown
+              style={{
+                body: {
+                  color: message.role === "user" ? "#FFFFFF" : "#334155",
+                  fontSize: 16,
+                },
+              }}
             >
-              <Text style={styles.toggleText}>
-                {message.showThought ? "▼ Hide Thought" : "▶ Show Thought"}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {message.showThought && message.thought && (
-            <View style={styles.thoughtContainer}>
-              <Text style={styles.thoughtTitle}>Model's Reasoning:</Text>
-              <Text style={styles.thoughtText}>{message.thought}</Text>
-            </View>
-          )}
-          <Markdown>{message.content}</Markdown>
-        </Text>
+              {message.content}
+            </Markdown>
+          </View>
+        )}
       </View>
       {message.role === "assistant" && tokensPerSecond !== undefined && (
         <Text style={styles.tokenInfo}>{tokensPerSecond} tokens/s</Text>
@@ -75,12 +95,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  messageText: {
-    fontSize: 16,
-    color: "#334155",
+  messageContent: {
+    marginTop: 4,
   },
-  userMessageText: {
-    color: "#FFFFFF",
+  userMessageContent: {
+    // User message styling is handled by Markdown style prop
   },
   tokenInfo: {
     fontSize: 12,
@@ -116,6 +135,18 @@ const styles = StyleSheet.create({
     color: "#3B82F6",
     fontSize: 12,
     fontWeight: "500",
+  },
+  imageContainer: {
+    marginVertical: 8,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#F1F5F9",
+  },
+  messageImage: {
+    width: "100%",
+    minHeight: 200,
+    maxHeight: 400,
+    borderRadius: 8,
   },
 });
 

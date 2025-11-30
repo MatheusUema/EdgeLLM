@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator 
 import { Message } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { useVoice } from "../hooks/useVoice";
+import { useImagePicker } from "../hooks/useImagePicker";
 
 interface ChatScreenProps {
   selectedGGUF: string | null;
@@ -15,6 +16,7 @@ interface ChatScreenProps {
   onStopGeneration: () => void;
   onBackToSelection: () => void;
   isGenerating: boolean;
+  onImageSelected?: (imageUri: string) => void;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -28,10 +30,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onStopGeneration,
   onBackToSelection,
   isGenerating,
+  onImageSelected,
 }) => {
   const { isListening, partialResults, toggleListening } = useVoice(onChangeInput);
+  const { isProcessing, selectImage } = useImagePicker();
 
   const displayText = isListening && partialResults ? partialResults : userInput;
+
+  const handleImagePress = async () => {
+    const result = await selectImage();
+    if (result && result.uri && onImageSelected) {
+      onImageSelected(result.uri);
+    }
+  };
 
   return (
     <>
@@ -57,9 +68,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <View style={styles.inputContainer}>
           <View style={styles.inputRow}>
             <TouchableOpacity
+              style={styles.imageButton}
+              onPress={handleImagePress}
+              disabled={isGenerating || isProcessing}
+            >
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#3B82F6" />
+              ) : (
+                <Text style={styles.imageIcon}>📷</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.micButton}
               onPress={toggleListening}
-              disabled={isGenerating}
+              disabled={isGenerating || isProcessing}
             >
               {isListening ? (
                 <View style={styles.listeningIndicator}>
@@ -75,7 +97,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               placeholderTextColor="#94A3B8"
               value={displayText}
               onChangeText={onChangeInput}
-              editable={!isListening}
+              editable={!isListening && !isProcessing}
             />
             {isGenerating ? (
               <TouchableOpacity style={styles.stopButton} onPress={onStopGeneration}>
@@ -148,6 +170,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     alignItems: "center",
+  },
+  imageButton: {
+    backgroundColor: "#F1F5F9",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 50,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  imageIcon: {
+    fontSize: 24,
   },
   micButton: {
     backgroundColor: "#F1F5F9",
