@@ -1,9 +1,10 @@
 import React from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { Message } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { useVoice } from "../hooks/useVoice";
 import { useImagePicker } from "../hooks/useImagePicker";
+import TextRecognition, { TextRecognitionScript } from "@react-native-ml-kit/text-recognition";
 
 interface ChatScreenProps {
   selectedGGUF: string | null;
@@ -16,7 +17,7 @@ interface ChatScreenProps {
   onStopGeneration: () => void;
   onBackToSelection: () => void;
   isGenerating: boolean;
-  onImageSelected?: (imageUri: string) => void;
+  onImageSelected?: (imageUri: string, extractedText?: string) => void;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -40,7 +41,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const handleImagePress = async () => {
     const result = await selectImage();
     if (result && result.uri && onImageSelected) {
-      onImageSelected(result.uri);
+      try {
+        // Extract text from the image using ML Kit
+        const recognizedText = await TextRecognition.recognize(result.uri);
+        const extractedText = recognizedText.text || "";
+        
+        // Call the callback with both image URI and extracted text
+        onImageSelected(result.uri, extractedText);
+      } catch (error) {
+        console.error("Text recognition error:", error);
+        // If text recognition fails, still pass the image URI
+        onImageSelected(result.uri, undefined);
+      }
     }
   };
 

@@ -137,10 +137,13 @@ function App(): React.JSX.Element {
     }
   };
 
-  const handleImageSelected = async (imageUri: string) => {
+  const handleImageSelected = async (imageUri: string, extractedText?: string) => {
     try {
-      // Create a message with the image
-      const imageMessage = `📷 [Image attached]`;
+      // Create a message with the image and extracted text
+      let imageMessage = `📷 [Image attached]`;
+      if (extractedText && extractedText.trim().length > 0) {
+        imageMessage = `📷 [Image attached]\n\n📝 Extracted text:\n${extractedText}`;
+      }
       await sendMessage(imageMessage, imageUri);
     } catch (error) {
       const errorMessage =
