@@ -16,6 +16,7 @@ export const useConversation = ({
     useState<Message[]>(INITIAL_CONVERSATION);
   const [isGenerating, setIsGenerating] = useState(false);
   const [tokensPerSecond, setTokensPerSecond] = useState<number[]>([]);
+  const [completionTimes, setCompletionTimes] = useState<number[]>([]);
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
 
   const toggleAutoScroll = useCallback((enabled: boolean) => {
@@ -127,6 +128,10 @@ export const useConversation = ({
           ...prev,
           parseFloat(result.timings.predicted_per_second.toFixed(2)),
         ]);
+        setCompletionTimes((prev) => [
+          ...prev,
+          result.completionTime,
+        ]);
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -167,6 +172,7 @@ export const useConversation = ({
     console.log("resetConversation");
     setConversation(INITIAL_CONVERSATION);
     setTokensPerSecond([]);
+    setCompletionTimes([]);
     setAutoScrollEnabled(true);
   }, []);
 
@@ -174,6 +180,7 @@ export const useConversation = ({
     conversation,
     isGenerating,
     tokensPerSecond,
+    completionTimes,
     autoScrollEnabled,
     toggleAutoScroll,
     toggleThought,

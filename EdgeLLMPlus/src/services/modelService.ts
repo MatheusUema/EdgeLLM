@@ -47,8 +47,10 @@ export const ModelService = {
     messages: Message[],
     stopWords: string[],
     onToken: (token: string) => void
-  ): Promise<{ timings: { predicted_per_second: number } }> {
-    return await context.completion(
+  ): Promise<{ timings: { predicted_per_second: number }; completionTime: number }> {
+    const startTime = Date.now();
+    
+    const result = await context.completion(
       {
         messages,
         n_predict: 10000,
@@ -58,6 +60,14 @@ export const ModelService = {
         onToken(data.token);
       }
     );
+    
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    return {
+      ...result,
+      completionTime: duration,
+    };
   },
 
   /**

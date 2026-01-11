@@ -47,6 +47,7 @@ function App(): React.JSX.Element {
     conversation,
     isGenerating,
     tokensPerSecond,
+    completionTimes,
     autoScrollEnabled,
     toggleAutoScroll,
     toggleThought,
@@ -184,6 +185,7 @@ function App(): React.JSX.Element {
               selectedGGUF={selectedGGUF}
               conversation={conversation}
               tokensPerSecond={tokensPerSecond}
+              completionTimes={completionTimes}
               onToggleThought={toggleThought}
               userInput={userInput}
               onChangeInput={setUserInput}

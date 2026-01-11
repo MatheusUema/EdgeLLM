@@ -7,6 +7,7 @@ interface MessageBubbleProps {
   message: Message;
   index: number;
   tokensPerSecond?: number;
+  completionTime?: number;
   onToggleThought?: (index: number) => void;
 }
 
@@ -14,6 +15,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   index,
   tokensPerSecond,
+  completionTime,
   onToggleThought,
 }) => {
   return (
@@ -70,7 +72,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
       </View>
       {message.role === "assistant" && tokensPerSecond !== undefined && (
-        <Text style={styles.tokenInfo}>{tokensPerSecond} tokens/s</Text>
+        <View style={styles.infoContainer}>
+          <Text style={styles.tokenInfo}>{tokensPerSecond} tokens/s</Text>
+          {completionTime !== undefined && (
+            <Text style={styles.tokenInfo}>
+              {completionTime}ms
+            </Text>
+          )}
+        </View>
       )}
     </View>
   );
@@ -100,6 +109,9 @@ const styles = StyleSheet.create({
   },
   userMessageContent: {
     // User message styling is handled by Markdown style prop
+  },
+  infoContainer: {
+    alignItems: "flex-end",
   },
   tokenInfo: {
     fontSize: 12,

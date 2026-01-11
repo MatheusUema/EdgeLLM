@@ -10,6 +10,7 @@ interface ChatScreenProps {
   selectedGGUF: string | null;
   conversation: Message[];
   tokensPerSecond: number[];
+  completionTimes: number[];
   onToggleThought: (index: number) => void;
   userInput: string;
   onChangeInput: (text: string) => void;
@@ -24,6 +25,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   selectedGGUF,
   conversation,
   tokensPerSecond,
+  completionTimes,
   onToggleThought,
   userInput,
   onChangeInput,
@@ -70,6 +72,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               message={msg}
               index={index + 1}
               tokensPerSecond={tokensPerSecond[Math.floor(index / 2)]}
+              completionTime={completionTimes[Math.floor(index / 2)]}
               onToggleThought={onToggleThought}
             />
           ))}
