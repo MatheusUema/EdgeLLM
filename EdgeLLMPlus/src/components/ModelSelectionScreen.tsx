@@ -24,7 +24,7 @@ export const ModelSelectionScreen: React.FC<ModelSelectionScreenProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.subtitle}>Choose a model format</Text>
+      <Text style={styles.subtitle}>Escolha um formato de modelo</Text>
       {modelFormats.map((format) => (
         <TouchableOpacity
           key={format.label}
@@ -40,7 +40,7 @@ export const ModelSelectionScreen: React.FC<ModelSelectionScreenProps> = ({
 
       {selectedModelFormat && (
         <View>
-          <Text style={styles.subtitle}>Select a .gguf file</Text>
+          <Text style={styles.subtitle}>Escolha um arquivo .gguf</Text>
           {isFetching && <ActivityIndicator size="small" color="#2563EB" />}
           {availableGGUFs.map((file, index) => {
             const isDownloaded = downloadedModels.includes(file);
@@ -77,12 +77,12 @@ export const ModelSelectionScreen: React.FC<ModelSelectionScreenProps> = ({
                     </View>
                     {isDownloaded && (
                       <View style={styles.loadModelIndicator}>
-                        <Text style={styles.loadModelText}>TAP TO LOAD →</Text>
+                        <Text style={styles.loadModelText}>Conversar →</Text>
                       </View>
                     )}
                     {!isDownloaded && (
                       <View style={styles.downloadIndicator}>
-                        <Text style={styles.downloadText}>DOWNLOAD →</Text>
+                        <Text style={styles.downloadText}>Carregar →</Text>
                       </View>
                     )}
                   </View>

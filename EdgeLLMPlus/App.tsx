@@ -140,9 +140,9 @@ function App(): React.JSX.Element {
   const handleImageSelected = async (imageUri: string, extractedText?: string) => {
     try {
       // Create a message with the image and extracted text
-      let imageMessage = `📷 [Image attached]`;
+      let imageMessage = ``;
       if (extractedText && extractedText.trim().length > 0) {
-        imageMessage = `📷 [Image attached]\n\n📝 Extracted text:\n${extractedText}`;
+        imageMessage = `${extractedText}`;
       }
       await sendMessage(imageMessage, imageUri);
     } catch (error) {
@@ -164,7 +164,7 @@ function App(): React.JSX.Element {
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>Llama Chat</Text>
+          <Text style={styles.title}>LLM Chat</Text>
 
           {currentPage === "modelSelection" && !isDownloading && (
             <ModelSelectionScreen

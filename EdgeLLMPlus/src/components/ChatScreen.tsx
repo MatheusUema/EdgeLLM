@@ -62,7 +62,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <Text style={styles.subtitle}>Chatting with {selectedGGUF}</Text>
         <View style={styles.chatContainer}>
           <Text style={styles.greetingText}>
-            🦙 Welcome! The Llama is ready to chat. Ask away! 🎉
+            🦙 Bem vindo! A LLM está pronta para conversar. Pode perguntar! 🎉
           </Text>
           {conversation.slice(1).map((msg, index) => (
             <MessageBubble
@@ -105,7 +105,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             </TouchableOpacity>
             <TextInput
               style={styles.input}
-              placeholder={isListening ? "Listening..." : "Type your message..."}
+              placeholder={isListening ? "Ouvindo..." : "Digite sua mensagem..."}
               placeholderTextColor="#94A3B8"
               value={displayText}
               onChangeText={onChangeInput}
@@ -117,13 +117,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.sendButton} onPress={onSendMessage}>
-                <Text style={styles.buttonText}>Send</Text>
+                <Text style={styles.buttonText}>Enviar</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
         <TouchableOpacity style={styles.backButton} onPress={onBackToSelection}>
-          <Text style={styles.backButtonText}>← Back to Model Selection</Text>
+          <Text style={styles.backButtonText}>← Voltar para seleção</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -173,8 +173,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    padding: 8,
+    fontSize: 14,
     color: "#334155",
     minHeight: 50,
   },
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   imageIcon: {
-    fontSize: 24,
+    fontSize: 12,
   },
   micButton: {
     backgroundColor: "#F1F5F9",
@@ -209,15 +209,15 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   micIcon: {
-    fontSize: 24,
+    fontSize: 12,
   },
   listeningIndicator: {
     paddingVertical: 4,
   },
   sendButton: {
     backgroundColor: "#3B82F6",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
     shadowColor: "#3B82F6",
     shadowOffset: { width: 0, height: 2 },
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
   backButton: {
