@@ -137,6 +137,21 @@ function App(): React.JSX.Element {
     }
   };
 
+  const handleImageSelected = async (imageUri: string, extractedText?: string) => {
+    try {
+      // Create a message with the image and extracted text
+      let imageMessage = ``;
+      if (extractedText && extractedText.trim().length > 0) {
+        imageMessage = `${extractedText}`;
+      }
+      await sendMessage(imageMessage, imageUri);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      Alert.alert("Error", `Failed to send image: ${errorMessage}`);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -149,7 +164,7 @@ function App(): React.JSX.Element {
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-          <Text style={styles.title}>Llama Chat</Text>
+          <Text style={styles.title}>LLM Chat</Text>
 
           {currentPage === "modelSelection" && !isDownloading && (
             <ModelSelectionScreen
@@ -176,6 +191,7 @@ function App(): React.JSX.Element {
               onStopGeneration={stopGeneration}
               onBackToSelection={handleBackToModelSelection}
               isGenerating={isGenerating}
+              onImageSelected={handleImageSelected}
             />
           )}
 

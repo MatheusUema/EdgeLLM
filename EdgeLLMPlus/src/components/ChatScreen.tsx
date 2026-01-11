@@ -1,8 +1,10 @@
 import React from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { Message } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { useVoice } from "../hooks/useVoice";
+import { useImagePicker } from "../hooks/useImagePicker";
+import TextRecognition, { TextRecognitionScript } from "@react-native-ml-kit/text-recognition";
 
 interface ChatScreenProps {
   selectedGGUF: string | null;
@@ -15,6 +17,7 @@ interface ChatScreenProps {
   onStopGeneration: () => void;
   onBackToSelection: () => void;
   isGenerating: boolean;
+  onImageSelected?: (imageUri: string, extractedText?: string) => void;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -28,10 +31,30 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onStopGeneration,
   onBackToSelection,
   isGenerating,
+  onImageSelected,
 }) => {
   const { isListening, partialResults, toggleListening } = useVoice(onChangeInput);
+  const { isProcessing, selectImage } = useImagePicker();
 
   const displayText = isListening && partialResults ? partialResults : userInput;
+
+  const handleImagePress = async () => {
+    const result = await selectImage();
+    if (result && result.uri && onImageSelected) {
+      try {
+        // Extract text from the image using ML Kit
+        const recognizedText = await TextRecognition.recognize(result.uri);
+        const extractedText = recognizedText.text || "";
+        
+        // Call the callback with both image URI and extracted text
+        onImageSelected(result.uri, extractedText);
+      } catch (error) {
+        console.error("Text recognition error:", error);
+        // If text recognition fails, still pass the image URI
+        onImageSelected(result.uri, undefined);
+      }
+    }
+  };
 
   return (
     <>
@@ -39,7 +62,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <Text style={styles.subtitle}>Chatting with {selectedGGUF}</Text>
         <View style={styles.chatContainer}>
           <Text style={styles.greetingText}>
-            🦙 Welcome! The Llama is ready to chat. Ask away! 🎉
+            🦙 Bem vindo! A LLM está pronta para conversar. Pode perguntar! 🎉
           </Text>
           {conversation.slice(1).map((msg, index) => (
             <MessageBubble
@@ -57,9 +80,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <View style={styles.inputContainer}>
           <View style={styles.inputRow}>
             <TouchableOpacity
+              style={styles.imageButton}
+              onPress={handleImagePress}
+              disabled={isGenerating || isProcessing}
+            >
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#3B82F6" />
+              ) : (
+                <Text style={styles.imageIcon}>📷</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.micButton}
               onPress={toggleListening}
-              disabled={isGenerating}
+              disabled={isGenerating || isProcessing}
             >
               {isListening ? (
                 <View style={styles.listeningIndicator}>
@@ -71,11 +105,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             </TouchableOpacity>
             <TextInput
               style={styles.input}
-              placeholder={isListening ? "Listening..." : "Type your message..."}
+              placeholder={isListening ? "Ouvindo..." : "Digite sua mensagem..."}
               placeholderTextColor="#94A3B8"
               value={displayText}
               onChangeText={onChangeInput}
-              editable={!isListening}
+              editable={!isListening && !isProcessing}
             />
             {isGenerating ? (
               <TouchableOpacity style={styles.stopButton} onPress={onStopGeneration}>
@@ -83,13 +117,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.sendButton} onPress={onSendMessage}>
-                <Text style={styles.buttonText}>Send</Text>
+                <Text style={styles.buttonText}>Enviar</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
         <TouchableOpacity style={styles.backButton} onPress={onBackToSelection}>
-          <Text style={styles.backButtonText}>← Back to Model Selection</Text>
+          <Text style={styles.backButtonText}>← Voltar para seleção</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -139,8 +173,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    padding: 8,
+    fontSize: 14,
     color: "#334155",
     minHeight: 50,
   },
@@ -148,6 +182,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     alignItems: "center",
+  },
+  imageButton: {
+    backgroundColor: "#F1F5F9",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 50,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  imageIcon: {
+    fontSize: 12,
   },
   micButton: {
     backgroundColor: "#F1F5F9",
@@ -161,15 +209,15 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   micIcon: {
-    fontSize: 24,
+    fontSize: 12,
   },
   listeningIndicator: {
     paddingVertical: 4,
   },
   sendButton: {
     backgroundColor: "#3B82F6",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
     shadowColor: "#3B82F6",
     shadowOffset: { width: 0, height: 2 },
@@ -189,7 +237,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
   backButton: {

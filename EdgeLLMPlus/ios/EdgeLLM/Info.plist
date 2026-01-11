@@ -38,6 +38,12 @@
 	<string>App requires access to the microphone for voice input.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>App requires access to speech recognition for converting speech to text.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>App requires access to the camera to take photos for chat messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>App requires access to your photo library to select images for chat messages.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>App requires permission to save photos to your library.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
