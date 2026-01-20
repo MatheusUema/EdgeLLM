@@ -40,7 +40,7 @@ export const ModelSelectionScreen: React.FC<ModelSelectionScreenProps> = ({
 
       {selectedModelFormat && (
         <View>
-          <Text style={styles.subtitle}>Escolha um arquivo .gguf</Text>
+          <Text style={styles.subtitle}>Select a .gguf file</Text>
           {isFetching && <ActivityIndicator size="small" color="#2563EB" />}
           {availableGGUFs.map((file, index) => {
             const isDownloaded = downloadedModels.includes(file);
@@ -77,12 +77,12 @@ export const ModelSelectionScreen: React.FC<ModelSelectionScreenProps> = ({
                     </View>
                     {isDownloaded && (
                       <View style={styles.loadModelIndicator}>
-                        <Text style={styles.loadModelText}>Conversar →</Text>
+                        <Text style={styles.loadModelText}>Talk →</Text>
                       </View>
                     )}
                     {!isDownloaded && (
                       <View style={styles.downloadIndicator}>
-                        <Text style={styles.downloadText}>Carregar →</Text>
+                        <Text style={styles.downloadText}>Load →</Text>
                       </View>
                     )}
                   </View>

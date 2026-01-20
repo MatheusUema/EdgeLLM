@@ -64,7 +64,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
         <Text style={styles.subtitle}>Chatting with {selectedGGUF}</Text>
         <View style={styles.chatContainer}>
           <Text style={styles.greetingText}>
-            🦙 Bem vindo! A LLM está pronta para conversar. Pode perguntar! 🎉
+            🦙 Welcome! The LLM is ready to chat. Ask away! 🎉
           </Text>
           {conversation.slice(1).map((msg, index) => (
             <MessageBubble
@@ -108,7 +108,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             </TouchableOpacity>
             <TextInput
               style={styles.input}
-              placeholder={isListening ? "Ouvindo..." : "Digite sua mensagem..."}
+              placeholder={isListening ? "Listening..." : "Type your message..."}
               placeholderTextColor="#94A3B8"
               value={displayText}
               onChangeText={onChangeInput}
@@ -120,13 +120,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.sendButton} onPress={onSendMessage}>
-                <Text style={styles.buttonText}>Enviar</Text>
+                <Text style={styles.buttonText}>Send</Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
         <TouchableOpacity style={styles.backButton} onPress={onBackToSelection}>
-          <Text style={styles.backButtonText}>← Voltar para seleção</Text>
+          <Text style={styles.backButtonText}>← Back to selection</Text>
         </TouchableOpacity>
       </View>
     </>
