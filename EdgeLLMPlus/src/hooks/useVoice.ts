@@ -47,7 +47,7 @@ export const useVoice = (
 
   const startListening = useCallback(async () => {
     try {
-      await Voice.start("pt-BR");
+      await Voice.start("en-US");
     } catch (err) {
       console.error("Error starting speech recognition:", err);
       setError("Failed to start listening");
