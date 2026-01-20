@@ -18,6 +18,7 @@ npm install
 The following packages are required:
 - `react-native-image-picker` - For camera and gallery access
 - `react-native-permissions` - For handling permissions
+- `react-native-image-crop-picker` - For cropping images before OCR
 
 ### 2. iOS Setup
 
@@ -65,18 +66,21 @@ yarn ios
    - Tap the 📷 button in the chat input area
    - Select "Camera" from the action sheet
    - Take a photo
+   - Crop the image as needed, then confirm
    - The image will be automatically added to the chat
 
 2. **Select from Gallery**:
    - Tap the 📷 button in the chat input area
    - Select "Photo Library" from the action sheet
    - Choose an image from your gallery
+   - Crop the image as needed, then confirm
    - The image will be automatically added to the chat
 
 ### Features
 
 - **Camera Access**: Take photos directly from the app
 - **Gallery Access**: Select existing photos from the device gallery
+- **Crop Before OCR**: Crop images before they are sent to OCR
 - **Image Display**: Images are displayed in chat messages
 - **Permission Handling**: Automatic permission requests with user-friendly messages
 - **Error Handling**: Graceful error handling for denied permissions or failed operations

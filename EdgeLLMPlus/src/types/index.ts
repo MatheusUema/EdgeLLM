@@ -41,3 +41,30 @@ export interface LlamaParams {
   n_gpu_layers: number;
 }
 
+declare module "react-native-image-crop-picker" {
+  export interface Image {
+    path: string;
+    mime?: string;
+    filename?: string;
+    size?: number;
+  }
+
+  export interface CropPickerOptions {
+    mediaType?: "photo" | "video" | "any";
+    cropping?: boolean;
+    freeStyleCropEnabled?: boolean;
+    includeExif?: boolean;
+    compressImageQuality?: number;
+    compressImageMaxWidth?: number;
+    compressImageMaxHeight?: number;
+    multiple?: boolean;
+    useFrontCamera?: boolean;
+  }
+
+  interface CropPickerApi {
+    openCamera(options?: CropPickerOptions): Promise<Image>;
+    openPicker(options?: CropPickerOptions): Promise<Image>;
+  }
+
+  const ImageCropPicker: CropPickerApi;
+}
