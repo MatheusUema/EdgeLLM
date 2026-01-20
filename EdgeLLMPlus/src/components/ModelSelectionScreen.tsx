@@ -24,7 +24,7 @@ export const ModelSelectionScreen: React.FC<ModelSelectionScreenProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.subtitle}>Escolha um formato de modelo</Text>
+      <Text style={styles.subtitle}>Pick a model format</Text>
       {modelFormats.map((format) => (
         <TouchableOpacity
           key={format.label}
