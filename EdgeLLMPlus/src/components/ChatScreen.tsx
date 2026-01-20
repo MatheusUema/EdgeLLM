@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Keyboard } from "react-native";
 import { Message } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { useVoice } from "../hooks/useVoice";
@@ -19,6 +19,7 @@ interface ChatScreenProps {
   onBackToSelection: () => void;
   isGenerating: boolean;
   onImageSelected?: (imageUri: string, extractedText?: string) => void;
+  showInputArea?: boolean;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -34,11 +35,27 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onBackToSelection,
   isGenerating,
   onImageSelected,
+  showInputArea = false,
 }) => {
   const { isListening, partialResults, toggleListening } = useVoice(onChangeInput);
   const { isProcessing, selectImage } = useImagePicker();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const displayText = isListening && partialResults ? partialResults : userInput;
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setIsKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handleImagePress = async () => {
     const result = await selectImage();
@@ -58,28 +75,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     }
   };
 
-  return (
-    <>
-      <View style={styles.chatWrapper}>
-        <Text style={styles.subtitle}>Chatting with {selectedGGUF}</Text>
-        <View style={styles.chatContainer}>
-          <Text style={styles.greetingText}>
-            🦙 Welcome! The LLM is ready to chat. Ask away! 🎉
-          </Text>
-          {conversation.slice(1).map((msg, index) => (
-            <MessageBubble
-              key={index}
-              message={msg}
-              index={index + 1}
-              tokensPerSecond={tokensPerSecond[Math.floor(index / 2)]}
-              completionTime={completionTimes[Math.floor(index / 2)]}
-              onToggleThought={onToggleThought}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.bottomContainer}>
+  if (showInputArea) {
+    return (
+      <View style={[styles.bottomContainer, { paddingBottom: isKeyboardVisible ? 20 : 4, marginBottom: isKeyboardVisible ? 8 : 0 }]}>
         <View style={styles.inputContainer}>
           <View style={styles.inputRow}>
             <TouchableOpacity
@@ -113,6 +111,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
               value={displayText}
               onChangeText={onChangeInput}
               editable={!isListening && !isProcessing}
+              multiline={true}
+              textAlignVertical="top"
             />
             {isGenerating ? (
               <TouchableOpacity style={styles.stopButton} onPress={onStopGeneration}>
@@ -125,11 +125,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
             )}
           </View>
         </View>
-        <TouchableOpacity style={styles.backButton} onPress={onBackToSelection}>
-          <Text style={styles.backButtonText}>← Back to selection</Text>
-        </TouchableOpacity>
       </View>
-    </>
+    );
+  }
+
+  return (
+    <View style={styles.chatWrapper}>
+      <Text style={styles.subtitle}>Chatting with {selectedGGUF}</Text>
+      <View style={styles.chatContainer}>
+        <Text style={styles.greetingText}>
+          🦙 Welcome! The LLM is ready to chat. Ask away! 🎉
+        </Text>
+        {conversation.slice(1).map((msg, index) => (
+          <MessageBubble
+            key={index}
+            message={msg}
+            index={index + 1}
+            tokensPerSecond={tokensPerSecond[Math.floor(index / 2)]}
+            completionTime={completionTimes[Math.floor(index / 2)]}
+            onToggleThought={onToggleThought}
+          />
+        ))}
+      </View>
+    </View>
   );
 };
 
@@ -162,7 +180,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
-    paddingBottom: 10,
+    paddingBottom: 20,
+    marginBottom: 8,
   },
   inputContainer: {
     padding: 16,
@@ -177,42 +196,46 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     borderRadius: 12,
     padding: 8,
+    paddingTop: 8,
     fontSize: 14,
     color: "#334155",
     minHeight: 50,
+    maxHeight: 120,
   },
   inputRow: {
     flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
+    gap: 6,
+    alignItems: "flex-start",
   },
   imageButton: {
     backgroundColor: "#F1F5F9",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    minWidth: 50,
+    minWidth: 42,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    marginTop: 2,
   },
   imageIcon: {
-    fontSize: 12,
+    fontSize: 16,
   },
   micButton: {
     backgroundColor: "#F1F5F9",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    minWidth: 50,
+    minWidth: 42,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    marginTop: 2,
   },
   micIcon: {
-    fontSize: 12,
+    fontSize: 16,
   },
   listeningIndicator: {
     paddingVertical: 4,
@@ -227,34 +250,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 2,
-    alignSelf: "stretch",
+    alignSelf: "flex-start",
     justifyContent: "center",
+    marginTop: 2,
   },
   stopButton: {
     backgroundColor: "#FF3B30",
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
-    alignSelf: "stretch",
+    alignSelf: "flex-start",
     justifyContent: "center",
+    marginTop: 2,
   },
   buttonText: {
     color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: "600",
-  },
-  backButton: {
-    backgroundColor: "#3B82F6",
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  backButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
     fontWeight: "600",
   },
 });
