@@ -1,12 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Platform, Alert } from 'react-native';
-import {
-  launchCamera,
-  launchImageLibrary,
-  ImagePickerResponse,
-  CameraOptions,
-  ImageLibraryOptions,
-} from 'react-native-image-picker';
+import ImageCropPicker, { Image as CropImage } from 'react-native-image-crop-picker';
 
 interface ImagePickerResult {
   uri: string;
@@ -17,6 +11,23 @@ interface ImagePickerResult {
 
 export const useImagePicker = () => {
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const normalizeFileUri = useCallback((path: string) => {
+    if (!path) {
+      return '';
+    }
+    return path.startsWith('file://') ? path : `file://${path}`;
+  }, []);
+
+  const mapCropResult = useCallback(
+    (image: CropImage): ImagePickerResult => ({
+      uri: normalizeFileUri(image.path),
+      type: image.mime,
+      fileName: image.filename,
+      fileSize: image.size,
+    }),
+    [normalizeFileUri]
+  );
 
   /**
    * Request camera permissions
@@ -41,7 +52,7 @@ export const useImagePicker = () => {
       return requestResult === RESULTS.GRANTED;
     } catch (error) {
       console.error('Permission error:', error);
-      // If permissions library fails, try anyway (react-native-image-picker may handle it)
+      // If permissions library fails, try anyway (native picker may still handle it)
       return true;
     }
   }, []);
@@ -53,25 +64,50 @@ export const useImagePicker = () => {
     try {
       const { check, request, PERMISSIONS, RESULTS } = await import('react-native-permissions');
       
-      const permission =
-        Platform.OS === 'ios'
-          ? PERMISSIONS.IOS.PHOTO_LIBRARY
-          : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
-
-      // Check current status
-      const checkResult = await check(permission);
-      if (checkResult === RESULTS.GRANTED) {
-        return true;
+      if (Platform.OS === 'ios') {
+        const permission = PERMISSIONS.IOS.PHOTO_LIBRARY;
+        const checkResult = await check(permission);
+        if (checkResult === RESULTS.GRANTED) {
+          return true;
+        }
+        const requestResult = await request(permission);
+        return requestResult === RESULTS.GRANTED;
+      } else {
+        // Android 13+ (API 33+) uses READ_MEDIA_IMAGES instead of READ_EXTERNAL_STORAGE
+        // Try READ_MEDIA_IMAGES first for Android 13+
+        try {
+          const permission = PERMISSIONS.ANDROID.READ_MEDIA_IMAGES;
+          const checkResult = await check(permission);
+          if (checkResult === RESULTS.GRANTED) {
+            return true;
+          }
+          const requestResult = await request(permission);
+          if (requestResult === RESULTS.GRANTED) {
+            return true;
+          }
+        } catch {
+          // READ_MEDIA_IMAGES might not be available on older Android versions
+        }
+        
+        // Fallback to READ_EXTERNAL_STORAGE for Android < 13
+        try {
+          const permission = PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
+          const checkResult = await check(permission);
+          if (checkResult === RESULTS.GRANTED) {
+            return true;
+          }
+          const requestResult = await request(permission);
+          return requestResult === RESULTS.GRANTED;
+        } catch {
+          // If both fail, return true to let native picker handle it
+          return true;
+        }
       }
-
-      // Request permission
-      const requestResult = await request(permission);
-      return requestResult === RESULTS.GRANTED;
     } catch (error) {
       console.error('Permission error:', error);
-      // If permissions library fails, try anyway (react-native-image-picker may handle it)
-      // iOS especially may handle permissions through the system picker
-      return Platform.OS === 'ios';
+      // If permissions library fails, return true to allow native picker to handle it
+      // react-native-image-crop-picker handles permissions internally
+      return true;
     }
   }, []);
 
@@ -79,107 +115,83 @@ export const useImagePicker = () => {
    * Launch camera to take a photo
    */
   const takePhoto = useCallback(async (): Promise<ImagePickerResult | null> => {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Alert.alert(
-        'Permission Denied',
-        'Camera access is required to take photos. Please enable it in your device settings.'
-      );
-      return null;
-    }
+    // Check permission but don't block - let react-native-image-crop-picker handle it
+    await requestCameraPermission();
 
     setIsProcessing(true);
 
-    return new Promise((resolve) => {
-      const options: CameraOptions = {
+    try {
+      const image = await ImageCropPicker.openCamera({
         mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 2048,
-        maxHeight: 2048,
-        saveToPhotos: false,
-      };
-
-      launchCamera(options, (response: ImagePickerResponse) => {
-        setIsProcessing(false);
-
-        if (response.didCancel) {
-          resolve(null);
-          return;
-        }
-
-        if (response.errorMessage) {
-          Alert.alert('Error', `Camera error: ${response.errorMessage}`);
-          resolve(null);
-          return;
-        }
-
-        if (response.assets && response.assets[0]) {
-          const asset = response.assets[0];
-          resolve({
-            uri: asset.uri || '',
-            type: asset.type,
-            fileName: asset.fileName,
-            fileSize: asset.fileSize,
-          });
-        } else {
-          resolve(null);
-        }
+        cropping: true,
+        freeStyleCropEnabled: true,
+        includeExif: false,
+        compressImageQuality: 0.8,
+        compressImageMaxWidth: 2048,
+        compressImageMaxHeight: 2048,
+        useFrontCamera: false,
       });
-    });
-  }, [requestCameraPermission]);
+
+      return mapCropResult(image);
+    } catch (error: any) {
+      if (error?.code === 'E_PICKER_CANCELLED') {
+        return null;
+      }
+      // Only show permission alert if it's actually a permission error
+      if (error?.code === 'E_PERMISSION_MISSING' || error?.message?.includes('permission')) {
+        Alert.alert(
+          'Permission Denied',
+          'Camera access is required to take photos. Please enable it in your device settings.'
+        );
+      } else {
+        Alert.alert('Error', `Camera error: ${error?.message || 'Unknown error'}`);
+      }
+      return null;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [mapCropResult, requestCameraPermission]);
 
   /**
    * Launch image library to select a photo
    */
   const pickImage = useCallback(async (): Promise<ImagePickerResult | null> => {
-    const hasPermission = await requestPhotoLibraryPermission();
-    if (!hasPermission) {
-      Alert.alert(
-        'Permission Denied',
-        'Photo library access is required to select images. Please enable it in your device settings.'
-      );
-      return null;
-    }
+    // Check permission but don't block - let react-native-image-crop-picker handle it
+    await requestPhotoLibraryPermission();
 
     setIsProcessing(true);
 
-    return new Promise((resolve) => {
-      const options: ImageLibraryOptions = {
+    try {
+      const image = await ImageCropPicker.openPicker({
         mediaType: 'photo',
-        quality: 0.8,
-        maxWidth: 2048,
-        maxHeight: 2048,
-        selectionLimit: 1,
-      };
-
-      launchImageLibrary(options, (response: ImagePickerResponse) => {
-        setIsProcessing(false);
-
-        if (response.didCancel) {
-          resolve(null);
-          return;
-        }
-
-        if (response.errorMessage) {
-          Alert.alert('Error', `Image picker error: ${response.errorMessage}`);
-          resolve(null);
-          return;
-        }
-
-        if (response.assets && response.assets[0]) {
-          const asset = response.assets[0];
-          resolve({
-            uri: asset.uri || '',
-            type: asset.type,
-            fileName: asset.fileName,
-            fileSize: asset.fileSize,
-          });
-        } else {
-          resolve(null);
-        }
+        cropping: true,
+        freeStyleCropEnabled: true,
+        includeExif: false,
+        compressImageQuality: 0.8,
+        compressImageMaxWidth: 2048,
+        compressImageMaxHeight: 2048,
+        multiple: false,
       });
-    });
-  }, [requestPhotoLibraryPermission]);
+
+      return mapCropResult(image);
+    } catch (error: any) {
+      if (error?.code === 'E_PICKER_CANCELLED') {
+        return null;
+      }
+      // Only show permission alert if it's actually a permission error
+      if (error?.code === 'E_PERMISSION_MISSING' || error?.message?.includes('permission')) {
+        Alert.alert(
+          'Permission Denied',
+          'Photo library access is required to select images. Please enable it in your device settings.'
+        );
+      } else {
+        Alert.alert('Error', `Image picker error: ${error?.message || 'Unknown error'}`);
+      }
+      return null;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [mapCropResult, requestPhotoLibraryPermission]);
 
   /**
    * Show action sheet to choose between camera and gallery

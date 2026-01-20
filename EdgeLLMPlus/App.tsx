@@ -7,6 +7,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  View,
+  TouchableOpacity,
+  BackHandler,
 } from "react-native";
 
 import { useModel } from "./src/hooks/useModel";
@@ -63,6 +66,18 @@ function App(): React.JSX.Element {
   useEffect(() => {
     checkDownloadedModels();
   }, [currentPage, checkDownloadedModels]);
+
+  // Handle native back button when on conversation page
+  useEffect(() => {
+    if (currentPage === "conversation") {
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleBackToModelSelection();
+        return true; // Prevent default back behavior
+      });
+
+      return () => backHandler.remove();
+    }
+  }, [currentPage]);
 
   const handleScroll = (event: any) => {
     const currentPosition = event.nativeEvent.contentOffset.y;
@@ -155,32 +170,44 @@ function App(): React.JSX.Element {
 
   return (
     <SafeAreaView style={styles.container}>
+      {currentPage === "conversation" && !isDownloading && (
+        <View style={styles.topBar}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackToModelSelection}>
+            <Text style={styles.backButtonText}>← Exit</Text>
+          </TouchableOpacity>
+          <Text style={styles.topBarTitle}>LLM Chat</Text>
+        </View>
+      )}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        <ScrollView
-          style={styles.scrollView}
-          ref={scrollViewRef}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        >
-          <Text style={styles.title}>LLM Chat</Text>
-
-          {currentPage === "modelSelection" && !isDownloading && (
-            <ModelSelectionScreen
-              modelFormats={MODEL_FORMATS}
-              selectedModelFormat={selectedModelFormat}
-              onFormatSelect={handleFormatSelection}
-              availableGGUFs={availableGGUFs}
-              isFetching={isFetching}
-              downloadedModels={downloadedModels}
-              selectedGGUF={selectedGGUF}
-              onGGUFSelect={handleGGUFSelection}
-            />
-          )}
-
-          {currentPage === "conversation" && !isDownloading && (
+        {currentPage === "conversation" && !isDownloading ? (
+          <>
+            <ScrollView
+              style={styles.scrollViewChat}
+              ref={scrollViewRef}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={styles.scrollViewContentWithTopBar}
+            >
+              <ChatScreen
+                selectedGGUF={selectedGGUF}
+                conversation={conversation}
+                tokensPerSecond={tokensPerSecond}
+                completionTimes={completionTimes}
+                onToggleThought={toggleThought}
+                userInput={userInput}
+                onChangeInput={setUserInput}
+                onSendMessage={handleSendMessage}
+                onStopGeneration={stopGeneration}
+                onBackToSelection={handleBackToModelSelection}
+                isGenerating={isGenerating}
+                onImageSelected={handleImageSelected}
+                showInputArea={false}
+              />
+            </ScrollView>
             <ChatScreen
               selectedGGUF={selectedGGUF}
               conversation={conversation}
@@ -194,13 +221,34 @@ function App(): React.JSX.Element {
               onBackToSelection={handleBackToModelSelection}
               isGenerating={isGenerating}
               onImageSelected={handleImageSelected}
+              showInputArea={true}
             />
-          )}
+          </>
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            ref={scrollViewRef}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
+            {currentPage === "modelSelection" && !isDownloading && (
+              <ModelSelectionScreen
+                modelFormats={MODEL_FORMATS}
+                selectedModelFormat={selectedModelFormat}
+                onFormatSelect={handleFormatSelection}
+                availableGGUFs={availableGGUFs}
+                isFetching={isFetching}
+                downloadedModels={downloadedModels}
+                selectedGGUF={selectedGGUF}
+                onGGUFSelect={handleGGUFSelection}
+              />
+            )}
 
-          {isDownloading && (
-            <DownloadProgress selectedGGUF={selectedGGUF} progress={progress} />
-          )}
-        </ScrollView>
+            {isDownloading && (
+              <DownloadProgress selectedGGUF={selectedGGUF} progress={progress} />
+            )}
+          </ScrollView>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -211,7 +259,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#FFFFFF",
   },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 1000,
+    position: "relative",
+  },
+  backButton: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  topBarTitle: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1E293B",
+    textAlign: "center",
+  },
+  backButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
   scrollView: {
+    paddingBottom: 20,
+  },
+  scrollViewChat: {
+    flex: 1,
+  },
+  scrollViewContentWithTopBar: {
     paddingBottom: 20,
   },
   title: {
