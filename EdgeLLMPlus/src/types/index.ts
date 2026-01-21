@@ -41,6 +41,24 @@ export interface LlamaParams {
   n_gpu_layers: number;
 }
 
+export interface PedagogyQuestion {
+  question_id: number;
+  question: string;
+  answer_a: string;
+  answer_b: string;
+  answer_c: string;
+  answer_d: string;
+  answer_e: string | null;
+  answer_f: string | null;
+  answer_g: string | null;
+  correct_answer: string;
+  category: string;
+  pedagogical_subdomain: string;
+  age_group: string;
+  year: number;
+  secondary_category: string | null;
+}
+
 declare module "react-native-image-crop-picker" {
   export interface Image {
     path: string;
