@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Keyboard, Platform } from "react-native";
 import { Message, LlamaContext } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { useVoice } from "../hooks/useVoice";
 import { useImagePicker } from "../hooks/useImagePicker";
 import { UseBenchmarkReturn } from "../hooks/useBenchmark";
 import TextRecognition, { TextRecognitionScript } from "@react-native-ml-kit/text-recognition";
+import { QuestionImageService } from "../services/questionImageService";
 
 interface ChatScreenProps {
   selectedGGUF: string | null;
@@ -52,6 +53,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const startBenchmark = benchmark.startBenchmark;
   const benchmarkError = benchmark.error;
   const lastAutoSentQuestionIdRef = useRef<number | null>(null);
+  const lastAutoSentImageQuestionIdRef = useRef<number | null>(null);
 
   const displayText = isListening && partialResults ? partialResults : userInput;
 
@@ -101,6 +103,64 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     isListening,
     isProcessing,
     onChangeInput,
+    showInputArea,
+  ]);
+
+  // If a benchmark is running and we are in IMAGE modality, auto-send the pre-generated question image
+  // through the exact same pathway as handleImagePress: OCR -> onImageSelected(imageUri, extractedText).
+  useEffect(() => {
+    if (!showInputArea) return;
+    if (!isBenchmarkRunning) return;
+    if (benchmark.currentModality !== "image") return;
+    if (!benchmark.currentQuestionId) return;
+    if (!onImageSelected) return;
+    if (lastAutoSentImageQuestionIdRef.current === benchmark.currentQuestionId) return;
+    if (isListening || isProcessing || isGenerating) return;
+
+    const questionId = benchmark.currentQuestionId;
+
+    const run = async () => {
+      try {
+        // Android-first: copy the asset into cache and use a file:// URI for OCR.
+        const fileUri = await QuestionImageService.ensureReadableFileUri(questionId);
+        if (!fileUri) {
+          console.warn(`[benchmark:image] No readable image URI for question ${questionId}`);
+          lastAutoSentImageQuestionIdRef.current = questionId;
+          return;
+        }
+
+        const ocrUri = fileUri;
+
+        try {
+          const recognizedText = await TextRecognition.recognize(ocrUri);
+          const extractedText = recognizedText.text || "";
+          lastAutoSentImageQuestionIdRef.current = questionId;
+          onImageSelected(ocrUri, extractedText);
+        } catch (ocrError) {
+          console.error("[benchmark:image] Text recognition error:", ocrError);
+          lastAutoSentImageQuestionIdRef.current = questionId;
+          onImageSelected(ocrUri, undefined);
+        }
+      } catch (e) {
+        console.error("[benchmark:image] Failed to auto-send image:", e);
+        lastAutoSentImageQuestionIdRef.current = questionId;
+      }
+    };
+
+    // Defer a tick so layout/state settles (similar to text auto-send)
+    const timeoutId = setTimeout(() => {
+      void run();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    benchmark.currentModality,
+    benchmark.currentQuestionId,
+    isBenchmarkRunning,
+    isGenerating,
+    isListening,
+    isProcessing,
+    onImageSelected,
     showInputArea,
   ]);
 
