@@ -32,7 +32,10 @@ export const useConversation = ({
   }, []);
 
   const sendMessage = useCallback(
-    async (userInput: string, imageUri?: string) => {
+    async (
+      userInput: string,
+      imageUri?: string
+    ): Promise<{ completionTime: number; tokensPerSecond: number; assistantMessage: string }> => {
       if (!context) {
         throw new Error("Model Not Loaded. Please load the model first.");
       }
@@ -68,6 +71,7 @@ export const useConversation = ({
       let currentAssistantMessage = "";
       let currentThought = "";
       let inThinkBlock = false;
+      let finalVisibleAssistantMessage = "";
 
       try {
         const result = await ModelService.generateCompletion(
@@ -108,6 +112,7 @@ export const useConversation = ({
             const visibleContent = currentAssistantMessage
               .replace(/<think>.*?<\/redacted_reasoning>/g, "")
               .trim();
+            finalVisibleAssistantMessage = visibleContent;
 
             setConversation((prev) => {
               const lastIndex = prev.length - 1;
@@ -132,6 +137,12 @@ export const useConversation = ({
           ...prev,
           result.completionTime,
         ]);
+
+        return {
+          completionTime: result.completionTime,
+          tokensPerSecond: parseFloat(result.timings.predicted_per_second.toFixed(2)),
+          assistantMessage: finalVisibleAssistantMessage,
+        };
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Keyboard } from "react-native";
 import { Message, LlamaContext } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { useVoice } from "../hooks/useVoice";
 import { useImagePicker } from "../hooks/useImagePicker";
-import { useBenchmark } from "../hooks/useBenchmark";
+import { UseBenchmarkReturn } from "../hooks/useBenchmark";
 import TextRecognition, { TextRecognitionScript } from "@react-native-ml-kit/text-recognition";
 
 interface ChatScreenProps {
@@ -22,6 +22,7 @@ interface ChatScreenProps {
   onImageSelected?: (imageUri: string, extractedText?: string) => void;
   showInputArea?: boolean;
   context: LlamaContext | null;
+  benchmark: UseBenchmarkReturn;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -39,18 +40,18 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   onImageSelected,
   showInputArea = false,
   context,
+  benchmark,
 }) => {
   const { isListening, partialResults, toggleListening } = useVoice(onChangeInput);
   const { isProcessing, selectImage } = useImagePicker();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const {
-    isRunning: isBenchmarkRunning,
-    progress: benchmarkProgress,
-    currentTest,
-    totalTests,
-    startBenchmark,
-    error: benchmarkError,
-  } = useBenchmark(context);
+  const isBenchmarkRunning = benchmark.isRunning;
+  const benchmarkProgress = benchmark.progress;
+  const currentTest = benchmark.currentTest;
+  const totalTests = benchmark.totalTests;
+  const startBenchmark = benchmark.startBenchmark;
+  const benchmarkError = benchmark.error;
+  const lastAutoSentQuestionIdRef = useRef<number | null>(null);
 
   const displayText = isListening && partialResults ? partialResults : userInput;
 
@@ -67,6 +68,41 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       keyboardDidHideListener.remove();
     };
   }, []);
+
+  // If a benchmark is running, instantly fill the current question into the chat input area and auto-send.
+  useEffect(() => {
+    if (!showInputArea) return;
+    if (!isBenchmarkRunning) return;
+    if (!benchmark.currentQuestionText) return;
+    if (benchmark.currentQuestionId && lastAutoSentQuestionIdRef.current === benchmark.currentQuestionId) return;
+    if (isListening || isProcessing || isGenerating) return;
+
+    const textToSend = benchmark.currentQuestionText;
+    onChangeInput(textToSend);
+
+    // Auto-send (guarded) right after filling the input.
+    const timeoutId = setTimeout(() => {
+      if (benchmark.isRunning && benchmark.currentQuestionText === textToSend) {
+        if (benchmark.currentQuestionId) {
+          lastAutoSentQuestionIdRef.current = benchmark.currentQuestionId;
+        }
+        void onSendMessage();
+      }
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [
+    benchmark.currentQuestionText,
+    benchmark.currentQuestionId,
+    isBenchmarkRunning,
+    isGenerating,
+    isListening,
+    isProcessing,
+    onChangeInput,
+    showInputArea,
+  ]);
 
   const handleImagePress = async () => {
     const result = await selectImage();

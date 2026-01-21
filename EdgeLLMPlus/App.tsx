@@ -14,6 +14,7 @@ import {
 
 import { useModel } from "./src/hooks/useModel";
 import { useConversation } from "./src/hooks/useConversation";
+import { useBenchmark } from "./src/hooks/useBenchmark";
 import { ModelSelectionScreen } from "./src/components/ModelSelectionScreen";
 import { ChatScreen } from "./src/components/ChatScreen";
 import { DownloadProgress } from "./src/components/DownloadProgress";
@@ -61,6 +62,9 @@ function App(): React.JSX.Element {
     context,
     autoScrollRef: scrollViewRef,
   });
+
+  // Benchmark hook (shared between both ChatScreen instances)
+  const benchmark = useBenchmark(context, selectedGGUF);
 
   // Check downloaded models when page changes
   useEffect(() => {
@@ -144,8 +148,29 @@ function App(): React.JSX.Element {
 
   const handleSendMessage = async () => {
     try {
-      await sendMessage(userInput);
+      // If auto-send fires while userInput has been cleared, fall back to current benchmark text.
+      const userText =
+        userInput.trim().length > 0
+          ? userInput
+          : benchmark.isRunning
+            ? benchmark.currentQuestionText
+            : "";
+
+      if (!userText.trim()) {
+        return; // avoid triggering useConversation empty-message error
+      }
+
+      const metrics = await sendMessage(userText);
       setUserInput("");
+
+      // If this send corresponds to the current benchmark question, record timings.
+      if (benchmark.isRunning && benchmark.currentQuestionText && userText === benchmark.currentQuestionText) {
+        benchmark.reportCurrentResult({
+          llmResponse: metrics.assistantMessage,
+          completionTime: metrics.completionTime,
+          tokensPerSecond: metrics.tokensPerSecond,
+        });
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -207,6 +232,7 @@ function App(): React.JSX.Element {
                 onImageSelected={handleImageSelected}
                 showInputArea={false}
                 context={context}
+                benchmark={benchmark}
               />
             </ScrollView>
             <ChatScreen
@@ -224,6 +250,7 @@ function App(): React.JSX.Element {
               onImageSelected={handleImageSelected}
               showInputArea={true}
               context={context}
+              benchmark={benchmark}
             />
           </>
         ) : (

@@ -24,27 +24,29 @@ export class BenchmarkService {
    * @returns Array of benchmark results
    */
   async runBenchmark(
-    onProgress?: (current: number, total: number) => void
+    onProgress?: (current: number, total: number) => void,
+    onQuestionText?: (questionText: string) => void
   ): Promise<BenchmarkResult[]> {
     this.results = [];
 
     // Load 5 random questions
-    const questions = await DatasetService.loadQuestions('cdpk', 5);
+    //temporarily set to 1 question
+    const questions = await DatasetService.loadQuestions('cdpk', 1);
     const totalTests = questions.length * 3; // 3 modalities per question
     let currentTest = 0;
 
     for (const question of questions) {
       // Test text modality
-      try {
-        currentTest++;
-        if (onProgress) {
-          onProgress(currentTest, totalTests);
-        }
-        const textResult = await this.testQuestionText(question);
-        this.results.push(textResult);
-      } catch (error) {
-        console.error(`Error testing question ${question.question_id} with text:`, error);
-      }
+      // try {
+      //   currentTest++;
+      //   if (onProgress) {
+      //     onProgress(currentTest, totalTests);
+      //   }
+      //   const textResult = await this.testQuestionText(question, onQuestionText);
+      //   this.results.push(textResult);
+      // } catch (error) {
+      //   console.error(`Error testing question ${question.question_id} with text:`, error);
+      // }
 
       // Test image modality
       try {
@@ -59,16 +61,16 @@ export class BenchmarkService {
       }
 
       // Test voice modality
-      try {
-        currentTest++;
-        if (onProgress) {
-          onProgress(currentTest, totalTests);
-        }
-        const voiceResult = await this.testQuestionVoice(question);
-        this.results.push(voiceResult);
-      } catch (error) {
-        console.error(`Error testing question ${question.question_id} with voice:`, error);
-      }
+      // try {
+      //   currentTest++;
+      //   if (onProgress) {
+      //     onProgress(currentTest, totalTests);
+      //   }
+      //   const voiceResult = await this.testQuestionVoice(question);
+      //   this.results.push(voiceResult);
+      // } catch (error) {
+      //   console.error(`Error testing question ${question.question_id} with voice:`, error);
+      // }
 
       // Small delay between questions
       await this.delay(500);
@@ -80,8 +82,14 @@ export class BenchmarkService {
   /**
    * Test question via text modality
    */
-  private async testQuestionText(question: PedagogyQuestion): Promise<BenchmarkResult> {
+  private async testQuestionText(
+    question: PedagogyQuestion,
+    onQuestionText?: (questionText: string) => void
+  ): Promise<BenchmarkResult> {
     const questionText = this.formatQuestion(question);
+    if (onQuestionText) {
+      onQuestionText(questionText);
+    }
     const startTime = Date.now();
 
     const messages: Message[] = [
