@@ -206,6 +206,7 @@ function App(): React.JSX.Element {
                 isGenerating={isGenerating}
                 onImageSelected={handleImageSelected}
                 showInputArea={false}
+                context={context}
               />
             </ScrollView>
             <ChatScreen
@@ -222,6 +223,7 @@ function App(): React.JSX.Element {
               isGenerating={isGenerating}
               onImageSelected={handleImageSelected}
               showInputArea={true}
+              context={context}
             />
           </>
         ) : (
