@@ -59,6 +59,19 @@ export interface PedagogyQuestion {
   secondary_category: string | null;
 }
 
+export type Modality = 'text' | 'image' | 'voice';
+
+export interface BenchmarkResult {
+  questionId: number;
+  modality: Modality;
+  questionText: string;
+  llmResponse: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  completionTime: number;
+  tokensPerSecond: number;
+}
+
 declare module "react-native-image-crop-picker" {
   export interface Image {
     path: string;
