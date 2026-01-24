@@ -8,17 +8,29 @@ export const INITIAL_CONVERSATION = [
 ];
 
 export const MODEL_FORMATS: ModelFormat[] = [
-  { label: "Llama-3.2-1B-Instruct" },
-  { label: "Qwen2-0.5B-Instruct" },
-  { label: "DeepSeek-R1-Distill-Qwen-1.5B" },
-  { label: "SmolLM2-1.7B-Instruct" },
+  // { label: "SmolLM2-360M-Instruct-Q8_0" },
+  { label: "SmolLM2-360M-Instruct-Q4_K_M" },
+  // { label: "SmolLM2-360M-Instruct-Q3_K_M" },
+  { label: "LFM2-700M-GGUF" },
+  // { label: "Ministral-3b-instruct-Q8_0" },
+  { label: "Ministral-3b-instruct-Q4_K_M" },
+  // { label: "Ministral-3b-instruct-Q2_K" },
+  // { label: "Qwen3-1.7B-Q2_K" },
+  { label: "Qwen3-1.7B-Q4_K_M" },
+  // { label: "Qwen3-1.7B-Q8_0" },
 ];
 
 export const HF_TO_GGUF: Record<string, string> = {
-  "Llama-3.2-1B-Instruct": "medmekk/Llama-3.2-1B-Instruct.GGUF",
-  "DeepSeek-R1-Distill-Qwen-1.5B": "medmekk/DeepSeek-R1-Distill-Qwen-1.5B.GGUF",
-  "Qwen2-0.5B-Instruct": "medmekk/Qwen2.5-0.5B-Instruct.GGUF",
-  "SmolLM2-1.7B-Instruct": "medmekk/SmolLM2-1.7B-Instruct.GGUF",
+  "SmolLM2-360M-Instruct-Q8_0": "matheusUema/SmolLM2-360M-Instruct-Q8_0-GGUF",
+  "SmolLM2-360M-Instruct-Q4_K_M": "matheusUema/SmolLM2-360M-Instruct-Q4_K_M-GGUF",
+  "SmolLM2-360M-Instruct-Q3_K_M": "matheusUema/SmolLM2-360M-Instruct-Q3_K_M-GGUF",
+  "LFM2-700M-GGUF": "LiquidAI/LFM2-700M-GGUF",
+  "Ministral-3b-instruct-Q8_0": "matheusUema/Ministral-3b-instruct-Q8_0-GGUF",
+  "Ministral-3b-instruct-Q4_K_M": "matheusUema/Ministral-3b-instruct-Q4_K_M-GGUF",
+  "Ministral-3b-instruct-Q2_K": "matheusUema/Ministral-3b-instruct-Q2_K-GGUF",
+  "Qwen3-1.7B-Q2_K": "matheusUema/Qwen3-1.7B-Q2_K-GGUF",
+  "Qwen3-1.7B-Q4_K_M": "matheusUema/Qwen3-1.7B-Q4_K_M-GGUF",
+  "Qwen3-1.7B-Q8_0": "matheusUema/Qwen3-1.7B-Q8_0-GGUF",
 };
 
 export const STOP_WORDS = [
