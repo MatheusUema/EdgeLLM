@@ -15,6 +15,7 @@ export interface UseBenchmarkReturn {
   currentQuestionText: string;
   currentQuestionId: number | null;
   currentModality: Modality | null;
+  currentQuestion: PedagogyQuestion | null;
   startBenchmark: () => Promise<void>;
   stopBenchmark: () => Promise<void>;
   exportResults: () => Promise<string | null>;
@@ -39,6 +40,7 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
   const [currentQuestionText, setCurrentQuestionText] = useState<string>('');
   const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
   const [currentModality, setCurrentModality] = useState<Modality | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<PedagogyQuestion | null>(null);
   const questionsRef = useRef<PedagogyQuestion[]>([]);
   const questionIndexRef = useRef<number>(0);
   const modalityIndexRef = useRef<number>(0); // 0=text, 1=image, 2=voice
@@ -108,6 +110,7 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
     setCurrentQuestionText('');
     setCurrentQuestionId(null);
     setCurrentModality(null);
+    setCurrentQuestion(null);
 
     try {
       // Load questions (UI-driven benchmark: chat sends, chat measures)
@@ -124,6 +127,7 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
 
       // Publish first question to UI (ChatScreen will type + auto-send)
       const first = questions[0];
+      setCurrentQuestion(first);
       setCurrentQuestionId(first.question_id);
       setCurrentModality('text');
       setCurrentQuestionText(formatQuestion(first));
@@ -252,10 +256,12 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
         setCurrentQuestionText('');
         setCurrentQuestionId(null);
         setCurrentModality(null);
+        setCurrentQuestion(null);
         return;
       }
 
       const nextQ = questions[nextIdx];
+      setCurrentQuestion(nextQ);
       setCurrentQuestionId(nextQ.question_id);
       setCurrentModality('text');
       setCurrentQuestionText(formatQuestion(nextQ));
@@ -276,6 +282,7 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
     currentQuestionText,
     currentQuestionId,
     currentModality,
+    currentQuestion,
     startBenchmark,
     stopBenchmark,
     exportResults,

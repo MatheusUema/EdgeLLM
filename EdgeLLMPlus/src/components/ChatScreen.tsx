@@ -7,6 +7,7 @@ import { useImagePicker } from "../hooks/useImagePicker";
 import { UseBenchmarkReturn } from "../hooks/useBenchmark";
 import TextRecognition, { TextRecognitionScript } from "@react-native-ml-kit/text-recognition";
 import { QuestionImageService } from "../services/questionImageService";
+import { TTSService } from "../services/ttsService";
 
 interface ChatScreenProps {
   selectedGGUF: string | null;
@@ -43,7 +44,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   context,
   benchmark,
 }) => {
-  const { isListening, partialResults, toggleListening } = useVoice(onChangeInput);
+  const { isListening, partialResults, toggleListening, stopListening, cancelListening } = useVoice(onChangeInput);
   const { isProcessing, selectImage } = useImagePicker();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const isBenchmarkRunning = benchmark.isRunning;
@@ -54,6 +55,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   const benchmarkError = benchmark.error;
   const lastAutoSentQuestionIdRef = useRef<number | null>(null);
   const lastAutoSentImageQuestionIdRef = useRef<number | null>(null);
+  const lastAutoSentVoiceQuestionIdRef = useRef<number | null>(null);
+  const isTtsRunningRef = useRef<boolean>(false);
 
   const displayText = isListening && partialResults ? partialResults : userInput;
 
@@ -161,6 +164,105 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
     isListening,
     isProcessing,
     onImageSelected,
+    showInputArea,
+  ]);
+
+  // If a benchmark is running and we are in VOICE modality, use TTS+recognition to get text,
+  // then auto-send it through the same pathway as manual voice input.
+  useEffect(() => {
+    if (!showInputArea) return;
+    if (!isBenchmarkRunning) return;
+    if (benchmark.currentModality !== "voice") return;
+    if (!benchmark.currentQuestion) return;
+    if (!benchmark.currentQuestionId) return;
+    if (lastAutoSentVoiceQuestionIdRef.current === benchmark.currentQuestionId) return;
+    if (isTtsRunningRef.current) return; // Prevent re-triggering while TTS is running
+    if (isListening || isProcessing || isGenerating) return;
+
+    const question = benchmark.currentQuestion;
+    const questionId = benchmark.currentQuestionId;
+
+    // Mark as running and set the sent flag immediately to prevent re-triggering
+    isTtsRunningRef.current = true;
+    lastAutoSentVoiceQuestionIdRef.current = questionId;
+
+    const run = async () => {
+      try {
+        // Use TTS to speak the question and capture via voice recognition
+        const recognizedText = await TTSService.speakAndCapture(question);
+        
+        if (!recognizedText || recognizedText.trim().length === 0) {
+          console.warn(`[benchmark:voice] No recognized text for question ${questionId}`);
+          isTtsRunningRef.current = false;
+          return;
+        }
+
+        // TTSService removes all Voice listeners, so useVoice hook's isListening might still be true
+        // Explicitly stop/cancel Voice recognition to reset the hook's state
+        try {
+          await cancelListening(); // This will set isListening to false in useVoice hook
+        } catch (e) {
+          console.log('[benchmark:voice] Error canceling listening (may already be stopped):', e);
+        }
+
+        // Wait a bit to ensure state has reset
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Fill the recognized text into the input
+        onChangeInput(recognizedText);
+
+        // Wait for input to be set, then auto-send after TTS finishes
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        // Auto-send the message - ensure Send button is pressed automatically
+        console.log('[benchmark:voice] Auto-sending message after TTS completion');
+        if (benchmark.isRunning && benchmark.currentModality === "voice" && benchmark.currentQuestionId === questionId) {
+          void onSendMessage();
+        } else {
+          // Retry once if conditions aren't met yet (e.g., state hasn't updated)
+          setTimeout(() => {
+            if (benchmark.isRunning && benchmark.currentModality === "voice" && benchmark.currentQuestionId === questionId) {
+              console.log('[benchmark:voice] Retrying auto-send');
+              void onSendMessage();
+            }
+          }, 300);
+        }
+
+        // Clear the running flag after completion
+        isTtsRunningRef.current = false;
+      } catch (e) {
+        console.error("[benchmark:voice] Failed to auto-send voice:", e);
+        // Ensure we reset listening state even on error
+        try {
+          await cancelListening();
+        } catch (err) {
+          // Ignore
+        }
+        // Clear the running flag on error
+        isTtsRunningRef.current = false;
+      }
+    };
+
+    // Defer a tick so layout/state settles
+    const timeoutId = setTimeout(() => {
+      void run();
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+      // Clear the running flag if effect is cleaned up
+      isTtsRunningRef.current = false;
+    };
+  }, [
+    benchmark.currentModality,
+    benchmark.currentQuestion,
+    benchmark.currentQuestionId,
+    isBenchmarkRunning,
+    isGenerating,
+    isListening,
+    isProcessing,
+    onChangeInput,
+    onSendMessage,
     showInputArea,
   ]);
 

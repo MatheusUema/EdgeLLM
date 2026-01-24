@@ -164,7 +164,19 @@ function App(): React.JSX.Element {
       setUserInput("");
 
       // If this send corresponds to the current benchmark question, record timings.
-      if (benchmark.isRunning && benchmark.currentQuestionText && userText === benchmark.currentQuestionText) {
+      // For text modality: match by question text
+      // For voice modality: match by question ID (recognized text may differ from formatted text)
+      const isTextModalityMatch = benchmark.isRunning && 
+        benchmark.currentModality === 'text' && 
+        benchmark.currentQuestionText && 
+        userText === benchmark.currentQuestionText;
+      
+      const isVoiceModalityMatch = benchmark.isRunning && 
+        benchmark.currentModality === 'voice' && 
+        benchmark.currentQuestionId !== null &&
+        userText.trim().length > 0; // Voice sends recognized text, just check it's not empty
+
+      if (isTextModalityMatch || isVoiceModalityMatch) {
         benchmark.reportCurrentResult({
           llmResponse: metrics.assistantMessage,
           completionTime: metrics.completionTime,
@@ -185,7 +197,16 @@ function App(): React.JSX.Element {
       if (extractedText && extractedText.trim().length > 0) {
         imageMessage = `${extractedText}`;
       }
-      await sendMessage(imageMessage, imageUri);
+      const metrics = await sendMessage(imageMessage, imageUri);
+
+      // If this send corresponds to the current benchmark question in image modality, record timings.
+      if (benchmark.isRunning && benchmark.currentModality === 'image' && benchmark.currentQuestionId !== null) {
+        benchmark.reportCurrentResult({
+          llmResponse: metrics.assistantMessage,
+          completionTime: metrics.completionTime,
+          tokensPerSecond: metrics.tokensPerSecond,
+        });
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
