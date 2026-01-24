@@ -14,6 +14,7 @@ import {
 
 import { useModel } from "./src/hooks/useModel";
 import { useConversation } from "./src/hooks/useConversation";
+import { useBenchmark } from "./src/hooks/useBenchmark";
 import { ModelSelectionScreen } from "./src/components/ModelSelectionScreen";
 import { ChatScreen } from "./src/components/ChatScreen";
 import { DownloadProgress } from "./src/components/DownloadProgress";
@@ -61,6 +62,9 @@ function App(): React.JSX.Element {
     context,
     autoScrollRef: scrollViewRef,
   });
+
+  // Benchmark hook (shared between both ChatScreen instances)
+  const benchmark = useBenchmark(context, selectedGGUF);
 
   // Check downloaded models when page changes
   useEffect(() => {
@@ -144,8 +148,38 @@ function App(): React.JSX.Element {
 
   const handleSendMessage = async () => {
     try {
-      await sendMessage(userInput);
+      // If auto-send fires while userInput has been cleared, fall back to current benchmark text.
+      const userText =
+        userInput.trim().length > 0
+          ? userInput
+          : benchmark.isRunning
+            ? benchmark.currentQuestionText
+            : "";
+
+      if (!userText.trim()) {
+        return; // avoid triggering useConversation empty-message error
+      }
+
+      const metrics = await sendMessage(userText);
       setUserInput("");
+
+      // If this send corresponds to the current benchmark question, record timings.
+      // For text modality: match by question text
+      const isTextModalityMatch = benchmark.isRunning && 
+        benchmark.currentModality === 'text' && 
+        benchmark.currentQuestionText && 
+        userText === benchmark.currentQuestionText;
+
+      if (isTextModalityMatch) {
+        benchmark.reportCurrentResult({
+          llmResponse: metrics.assistantMessage,
+          completionTime: metrics.completionTime,
+          tokensPerSecond: metrics.tokensPerSecond,
+        });
+        
+        // Reset conversation after each benchmark response
+        resetConversation();
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -160,7 +194,16 @@ function App(): React.JSX.Element {
       if (extractedText && extractedText.trim().length > 0) {
         imageMessage = `${extractedText}`;
       }
-      await sendMessage(imageMessage, imageUri);
+      const metrics = await sendMessage(imageMessage, imageUri);
+
+      // If this send corresponds to the current benchmark question in image modality, record timings.
+      if (benchmark.isRunning && benchmark.currentModality === 'image' && benchmark.currentQuestionId !== null) {
+        benchmark.reportCurrentResult({
+          llmResponse: metrics.assistantMessage,
+          completionTime: metrics.completionTime,
+          tokensPerSecond: metrics.tokensPerSecond,
+        });
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -206,6 +249,8 @@ function App(): React.JSX.Element {
                 isGenerating={isGenerating}
                 onImageSelected={handleImageSelected}
                 showInputArea={false}
+                context={context}
+                benchmark={benchmark}
               />
             </ScrollView>
             <ChatScreen
@@ -222,6 +267,8 @@ function App(): React.JSX.Element {
               isGenerating={isGenerating}
               onImageSelected={handleImageSelected}
               showInputArea={true}
+              context={context}
+              benchmark={benchmark}
             />
           </>
         ) : (

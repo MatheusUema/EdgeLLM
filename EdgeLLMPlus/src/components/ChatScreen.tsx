@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Keyboard } from "react-native";
-import { Message } from "../types";
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Keyboard, Platform } from "react-native";
+import { Message, LlamaContext } from "../types";
 import { MessageBubble } from "./MessageBubble";
 import { useVoice } from "../hooks/useVoice";
 import { useImagePicker } from "../hooks/useImagePicker";
+import { UseBenchmarkReturn } from "../hooks/useBenchmark";
 import TextRecognition, { TextRecognitionScript } from "@react-native-ml-kit/text-recognition";
 
 interface ChatScreenProps {
@@ -20,6 +21,8 @@ interface ChatScreenProps {
   isGenerating: boolean;
   onImageSelected?: (imageUri: string, extractedText?: string) => void;
   showInputArea?: boolean;
+  context: LlamaContext | null;
+  benchmark: UseBenchmarkReturn;
 }
 
 export const ChatScreen: React.FC<ChatScreenProps> = ({
@@ -36,10 +39,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   isGenerating,
   onImageSelected,
   showInputArea = false,
+  context,
+  benchmark,
 }) => {
-  const { isListening, partialResults, toggleListening } = useVoice(onChangeInput);
+  const { isListening, partialResults, toggleListening, stopListening, cancelListening } = useVoice(onChangeInput);
   const { isProcessing, selectImage } = useImagePicker();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const isBenchmarkRunning = benchmark.isRunning;
+  const benchmarkProgress = benchmark.progress;
+  const currentTest = benchmark.currentTest;
+  const totalTests = benchmark.totalTests;
+  const startBenchmark = benchmark.startBenchmark;
+  const benchmarkError = benchmark.error;
+  const lastAutoSentQuestionIdRef = useRef<number | null>(null);
 
   const displayText = isListening && partialResults ? partialResults : userInput;
 
@@ -56,6 +68,41 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
       keyboardDidHideListener.remove();
     };
   }, []);
+
+  // If a benchmark is running, instantly fill the current question into the chat input area and auto-send.
+  useEffect(() => {
+    if (!showInputArea) return;
+    if (!isBenchmarkRunning) return;
+    if (!benchmark.currentQuestionText) return;
+    if (benchmark.currentQuestionId && lastAutoSentQuestionIdRef.current === benchmark.currentQuestionId) return;
+    if (isListening || isProcessing || isGenerating) return;
+
+    const textToSend = benchmark.currentQuestionText;
+    onChangeInput(textToSend);
+
+    // Auto-send (guarded) right after filling the input.
+    const timeoutId = setTimeout(() => {
+      if (benchmark.isRunning && benchmark.currentQuestionText === textToSend) {
+        if (benchmark.currentQuestionId) {
+          lastAutoSentQuestionIdRef.current = benchmark.currentQuestionId;
+        }
+        void onSendMessage();
+      }
+    }, 0);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [
+    benchmark.currentQuestionText,
+    benchmark.currentQuestionId,
+    isBenchmarkRunning,
+    isGenerating,
+    isListening,
+    isProcessing,
+    onChangeInput,
+    showInputArea,
+  ]);
 
   const handleImagePress = async () => {
     const result = await selectImage();
@@ -132,6 +179,49 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({
   return (
     <View style={styles.chatWrapper}>
       <Text style={styles.subtitle}>Chatting with {selectedGGUF}</Text>
+      
+      {/* Benchmark Button */}
+      {!showInputArea && (
+        <TouchableOpacity
+          style={[
+            styles.benchmarkButton,
+            (isBenchmarkRunning || isGenerating) && styles.benchmarkButtonDisabled,
+          ]}
+          onPress={startBenchmark}
+          disabled={isBenchmarkRunning || isGenerating}
+        >
+          {isBenchmarkRunning ? (
+            <View style={styles.benchmarkButtonContent}>
+              <ActivityIndicator size="small" color="#FFFFFF" style={styles.benchmarkSpinner} />
+              <Text style={styles.benchmarkButtonText}>
+                Running Benchmark... {benchmarkProgress}%
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.benchmarkButtonText}>🚀 Run Benchmark</Text>
+          )}
+        </TouchableOpacity>
+      )}
+
+      {/* Benchmark Progress Indicator */}
+      {isBenchmarkRunning && !showInputArea && (
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${benchmarkProgress}%` }]} />
+          </View>
+          <Text style={styles.progressText}>
+            Test {currentTest} of {totalTests}
+          </Text>
+        </View>
+      )}
+
+      {/* Benchmark Error Display */}
+      {benchmarkError && !showInputArea && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>⚠️ {benchmarkError}</Text>
+        </View>
+      )}
+
       <View style={styles.chatContainer}>
         <Text style={styles.greetingText}>
           🦙 Welcome! The LLM is ready to chat. Ask away! 🎉
@@ -267,6 +357,75 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
+  },
+  benchmarkButton: {
+    backgroundColor: "#10B981",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  benchmarkButtonDisabled: {
+    backgroundColor: "#94A3B8",
+    shadowOpacity: 0.1,
+  },
+  benchmarkButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  benchmarkSpinner: {
+    marginRight: 8,
+  },
+  benchmarkButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  progressContainer: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 4,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#10B981",
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 12,
+    color: "#64748B",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  errorContainer: {
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  errorText: {
+    fontSize: 12,
+    color: "#DC2626",
+    textAlign: "center",
   },
 });
 

@@ -107,6 +107,34 @@ android {
     }
 }
 
+// --- Question images: copy JS-side assets into Android app assets for runtime OCR ---
+// This copies: <repo>/assets/questions_images/*.png  ->  android/app/src/main/assets/questions_images/*.png
+// so React Native can access them via RNFS.copyFileAssets / file:///android_asset/...
+def questionsImagesSrcDir = file("${rootDir}/../assets/questions_images")
+def questionsImagesDstDir = file("${projectDir}/src/main/assets/questions_images")
+
+tasks.register("copyQuestionImagesToAssets") {
+    description = "Copy pre-generated question images into android/app assets for OCR"
+    doLast {
+        if (!questionsImagesSrcDir.exists()) {
+            println("Question images source directory does not exist: " + questionsImagesSrcDir)
+            return
+        }
+        questionsImagesDstDir.mkdirs()
+        copy {
+            from(questionsImagesSrcDir)
+            include("**/*.png")
+            into(questionsImagesDstDir)
+        }
+        println("Copied question images to: " + questionsImagesDstDir)
+    }
+}
+
+// Ensure assets are present before building.
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("copyQuestionImagesToAssets")
+}
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")

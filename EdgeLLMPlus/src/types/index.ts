@@ -41,6 +41,37 @@ export interface LlamaParams {
   n_gpu_layers: number;
 }
 
+export interface PedagogyQuestion {
+  question_id: number;
+  question: string;
+  answer_a: string;
+  answer_b: string;
+  answer_c: string;
+  answer_d: string;
+  answer_e: string | null;
+  answer_f: string | null;
+  answer_g: string | null;
+  correct_answer: string;
+  category: string;
+  pedagogical_subdomain: string;
+  age_group: string;
+  year: number;
+  secondary_category: string | null;
+}
+
+export type Modality = 'text' | 'image' | 'voice';
+
+export interface BenchmarkResult {
+  questionId: number;
+  modality: Modality;
+  questionText: string;
+  llmResponse: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  completionTime: number;
+  tokensPerSecond: number;
+}
+
 declare module "react-native-image-crop-picker" {
   export interface Image {
     path: string;

@@ -72,3 +72,8 @@ assets/
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+.env
+.env*
+
+.cursor/
