@@ -218,7 +218,12 @@ function App(): React.JSX.Element {
           <TouchableOpacity style={styles.backButton} onPress={handleBackToModelSelection}>
             <Text style={styles.backButtonText}>← Exit</Text>
           </TouchableOpacity>
-          <Text style={styles.topBarTitle}>LLM Chat</Text>
+          <View style={styles.topBarTitleContainer} pointerEvents="none">
+            <Text style={styles.topBarTitle}>LLM Chat</Text>
+          </View>
+          <TouchableOpacity style={styles.resetButton} onPress={resetConversation}>
+            <Text style={styles.resetButtonText}>↻ Reset</Text>
+          </TouchableOpacity>
         </View>
       )}
       <KeyboardAvoidingView
@@ -329,16 +334,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
   },
-  topBarTitle: {
+  topBarTitleContainer: {
     position: "absolute",
     left: 0,
     right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topBarTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1E293B",
     textAlign: "center",
   },
   backButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  resetButton: {
+    backgroundColor: "#10B981",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    position: "absolute",
+    right: 16,
+  },
+  resetButtonText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
