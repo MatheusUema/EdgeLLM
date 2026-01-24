@@ -165,23 +165,20 @@ function App(): React.JSX.Element {
 
       // If this send corresponds to the current benchmark question, record timings.
       // For text modality: match by question text
-      // For voice modality: match by question ID (recognized text may differ from formatted text)
       const isTextModalityMatch = benchmark.isRunning && 
         benchmark.currentModality === 'text' && 
         benchmark.currentQuestionText && 
         userText === benchmark.currentQuestionText;
-      
-      const isVoiceModalityMatch = benchmark.isRunning && 
-        benchmark.currentModality === 'voice' && 
-        benchmark.currentQuestionId !== null &&
-        userText.trim().length > 0; // Voice sends recognized text, just check it's not empty
 
-      if (isTextModalityMatch || isVoiceModalityMatch) {
+      if (isTextModalityMatch) {
         benchmark.reportCurrentResult({
           llmResponse: metrics.assistantMessage,
           completionTime: metrics.completionTime,
           tokensPerSecond: metrics.tokensPerSecond,
         });
+        
+        // Reset conversation after each benchmark response
+        resetConversation();
       }
     } catch (error) {
       const errorMessage =

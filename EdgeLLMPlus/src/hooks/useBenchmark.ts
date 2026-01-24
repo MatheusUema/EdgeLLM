@@ -43,7 +43,6 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
   const [currentQuestion, setCurrentQuestion] = useState<PedagogyQuestion | null>(null);
   const questionsRef = useRef<PedagogyQuestion[]>([]);
   const questionIndexRef = useRef<number>(0);
-  const modalityIndexRef = useRef<number>(0); // 0=text, 1=image, 2=voice
 
   const formatQuestion = useCallback((question: PedagogyQuestion): string => {
     return `${question.question}\n\nA. ${question.answer_a}\nB. ${question.answer_b}\nC. ${question.answer_c}\nD. ${question.answer_d}\n\nPlease select the correct answer (A, B, C, or D).`;
@@ -113,13 +112,12 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
     setCurrentQuestion(null);
 
     try {
-      // Load questions (UI-driven benchmark: chat sends, chat measures)
-      const questions = await DatasetService.loadQuestions('cdpk', 1);
+      // Load all questions (UI-driven benchmark: chat sends, chat measures)
+      const questions = DatasetService.getAllQuestions();
       questionsRef.current = questions;
       questionIndexRef.current = 0;
-      modalityIndexRef.current = 0;
-      // text + image + voice per question
-      setTotalTests(questions.length * 3);
+      // text only per question
+      setTotalTests(questions.length);
 
       if (questions.length === 0) {
         throw new Error('No questions found for benchmark.');
@@ -132,7 +130,7 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
       setCurrentModality('text');
       setCurrentQuestionText(formatQuestion(first));
       setCurrentTest(1);
-      setProgress(Math.floor((1 / (questions.length * 3)) * 100));
+      setProgress(Math.floor((1 / questions.length) * 100));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
@@ -176,12 +174,10 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
       if (!isRunning) return;
       const questions = questionsRef.current;
       const idx = questionIndexRef.current;
-      const modalityIdx = modalityIndexRef.current;
       const q = questions[idx];
       if (!q) return;
 
-      const modalities: Modality[] = ['text', 'image', 'voice'];
-      const modality: Modality = modalities[modalityIdx] ?? 'text';
+      const modality: Modality = 'text';
 
       // Minimal correctness check: match letter A/B/C/D anywhere
       const responseUpper = (data.llmResponse || '').toUpperCase();
@@ -203,8 +199,8 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
       setResults((prev) => {
         const updated = [...prev, resultRow];
 
-        // If we just finished the last modality of the last question, auto-export + alert.
-        if (idx + 1 >= questions.length && modalityIdx === 2) {
+        // If we just finished the last question, auto-export + alert.
+        if (idx + 1 >= questions.length) {
           // Defer side-effects out of the state updater.
           setTimeout(async () => {
             try {
@@ -228,27 +224,9 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
         return updated;
       });
 
-      // Advance modality or question.
-      if (modalityIdx < 2) {
-        // Next modality for same question
-        const nextModalityIdx = modalityIdx + 1;
-        modalityIndexRef.current = nextModalityIdx;
-        const nextModality: Modality = modalities[nextModalityIdx];
-        setCurrentModality(nextModality);
-
-        // For image/voice, ChatScreen will handle sending; clear text to prevent text auto-send.
-        setCurrentQuestionText('');
-
-        const testNumber = idx * 3 + nextModalityIdx + 1; // 1-based
-        setCurrentTest(testNumber);
-        setProgress(Math.floor((testNumber / (questions.length * 3)) * 100));
-        return;
-      }
-
-      // Move to next question (back to text modality)
+      // Move to next question (text modality only)
       const nextIdx = idx + 1;
       questionIndexRef.current = nextIdx;
-      modalityIndexRef.current = 0;
 
       if (nextIdx >= questions.length) {
         setProgress(100);
@@ -265,9 +243,9 @@ export const useBenchmark = (context: LlamaContext | null, modelName: string | n
       setCurrentQuestionId(nextQ.question_id);
       setCurrentModality('text');
       setCurrentQuestionText(formatQuestion(nextQ));
-      const testNumber = nextIdx * 3 + 1;
+      const testNumber = nextIdx + 1;
       setCurrentTest(testNumber);
-      setProgress(Math.floor((testNumber / (questions.length * 3)) * 100));
+      setProgress(Math.floor((testNumber / questions.length) * 100));
     },
     [exportResultsArray, formatQuestion, isRunning]
   );

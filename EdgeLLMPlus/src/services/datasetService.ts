@@ -2,15 +2,13 @@ import { PedagogyQuestion } from '../types';
 
 // Import JSON datasets - Metro bundler will handle these
 // Note: The path is relative to this file location
-const cdpkData = require('../../assets/datasets/cdpk.json');
-const sendData = require('../../assets/datasets/send.json');
+const cdpkData = require('../../assets/datasets/maths.json');
 
 export interface DatasetService {
   loadQuestions(
-    config: 'cdpk' | 'send',
     sampleSize?: number
   ): Promise<PedagogyQuestion[]>;
-  getAllQuestions(config: 'cdpk' | 'send'): PedagogyQuestion[];
+  getAllQuestions(): PedagogyQuestion[];
   shuffleArray<T>(array: T[]): T[];
 }
 
@@ -20,22 +18,19 @@ export interface DatasetService {
 export const DatasetService: DatasetService = {
   /**
    * Load questions from bundled JSON dataset
-   * @param config - 'cdpk' or 'send'
+   * @param config 
    * @param sampleSize - Optional number of questions to return (randomly sampled)
    * @returns Array of pedagogy questions
    */
   async loadQuestions(
-    config: 'cdpk' | 'send',
     sampleSize?: number
   ): Promise<PedagogyQuestion[]> {
     try {
       // Get the appropriate dataset
-      const allQuestions: PedagogyQuestion[] = config === 'cdpk' 
-        ? (cdpkData as PedagogyQuestion[])
-        : (sendData as PedagogyQuestion[]);
+      const allQuestions: PedagogyQuestion[] = (cdpkData as PedagogyQuestion[]);
 
       if (!Array.isArray(allQuestions)) {
-        throw new Error(`Invalid dataset format for ${config}. Expected an array.`);
+        throw new Error(`Invalid dataset format. Expected an array.`);
       }
 
       // If no sample size specified, return all questions
@@ -47,9 +42,9 @@ export const DatasetService: DatasetService = {
       const shuffled = this.shuffleArray([...allQuestions]);
       return shuffled.slice(0, Math.min(sampleSize, shuffled.length));
     } catch (error) {
-      console.error(`Error loading ${config} dataset:`, error);
+      console.error(`Error loading dataset:`, error);
       throw new Error(
-        `Failed to load ${config} dataset: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to load dataset: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   },
@@ -59,8 +54,8 @@ export const DatasetService: DatasetService = {
    * @param config - 'cdpk' or 'send'
    * @returns Array of all pedagogy questions
    */
-  getAllQuestions(config: 'cdpk' | 'send'): PedagogyQuestion[] {
-    const dataset = config === 'cdpk' ? cdpkData : sendData;
+  getAllQuestions(): PedagogyQuestion[] {
+    const dataset = cdpkData;
     return dataset as PedagogyQuestion[];
   },
 
